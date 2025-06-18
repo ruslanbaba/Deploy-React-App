@@ -5,17 +5,15 @@ This repository contains a basic React app for use in a CI/CD and deployment cha
 ## 📝 Task Overview
 
 1. Fork or clone this repo
-2. Set up a CI/CD pipeline:
-   - Run lint checks
+2. Using GitHub Actions, set up a CI/CD pipeline that:
    - Run tests
-   - Deploy to AWS
+   - Deploy to your own free AWS environment
 3. Provide a link to your deployed app + infrastructure notes
 
 ## 📦 Getting Started
 
 ```bash
 npm install
-npm run lint
 npm test
 npm start
 ```
@@ -24,10 +22,5 @@ npm start
 
 - React
 - Jest (for testing)
-- ESLint
 - GitHub Actions (CI)
 - AWS (EC2 or ECS)
-
-## 📁 infra/ec2-provision.sh
-
-Feel free to replace this with Terraform, AWS CDK, or manual notes.
