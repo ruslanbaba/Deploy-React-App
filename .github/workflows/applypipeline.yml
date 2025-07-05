@@ -42,7 +42,6 @@ jobs:
           bucket = "${{ steps.parse.outputs.bucket }}"
           key    = "state/terraform.tfstate"
           region = "${{ steps.parse.outputs.region }}"
-          use_lockfile = true
           EOF
 
       - name: Setup Terraform
