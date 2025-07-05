@@ -20,43 +20,29 @@ jobs:
       - name: Parse region and bucket from tfvars
         id: parse
         run: |
-          REGION=$(awk -F= '/^region/ {gsub(/ /, "", $2); gsub(/"/, "", $2); print $2}' "$TF_VAR_file")
-          BUCKET=$(awk -F= '/^bucket_name/ {gsub(/ /, "", $2); gsub(/"/, "", $2); print $2}' "$TF_VAR_file")
-          echo "region=$REGION" >> "$GITHUB_OUTPUT"
-          echo "bucket=$BUCKET" >> "$GITHUB_OUTPUT"
-
-      - name: Validate parsed values
-        run: |
-          echo "Parsed region: ${{ steps.parse.outputs.region }}"
-          echo "Parsed bucket: ${{ steps.parse.outputs.bucket }}"
-          if [ -z "${{ steps.parse.outputs.bucket }}" ]; then
-            echo "::error ::Bucket name is empty. Please check tfvars format."
-            exit 1
-          fi
+          REGION=$(grep '^region' $TF_VAR_file | cut -d'=' -f2 | tr -d '" ')
+          BUCKET=$(grep '^bucket' $TF_VAR_file | cut -d'=' -f2 | tr -d '" ')
+          echo "region=$REGION" >> $GITHUB_OUTPUT
+          echo "bucket=$BUCKET" >> $GITHUB_OUTPUT
 
       - name: Create backend S3 bucket if not exists
         run: |
-          BUCKET=${{ steps.parse.outputs.bucket }}
-          REGION=${{ steps.parse.outputs.region }}
-
-          if aws s3api head-bucket --bucket "$BUCKET" 2>/dev/null; then
-            echo "Bucket $BUCKET already exists."
-          else
-            if [ "$REGION" = "us-east-1" ]; then
-              aws s3api create-bucket --bucket "$BUCKET"
-            else
-              aws s3api create-bucket --bucket "$BUCKET" --region "$REGION" --create-bucket-configuration LocationConstraint="$REGION"
-            fi
-          fi
+          aws s3api head-bucket --bucket ${{ steps.parse.outputs.bucket }} 2>/dev/null || \
+          aws s3api create-bucket \
+            --bucket ${{ steps.parse.outputs.bucket }} \
+            --region ${{ steps.parse.outputs.region }} \
+            --create-bucket-configuration LocationConstraint=${{ steps.parse.outputs.region }}
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
       - name: Generate backend config
         run: |
-          echo "bucket = \"${{ steps.parse.outputs.bucket }}\"" > terraform/backend.hcl
-          echo "key    = \"state/terraform.tfstate\"" >> terraform/backend.hcl
-          echo "region = \"${{ steps.parse.outputs.region }}\"" >> terraform/backend.hcl
+          cat <<EOF > terraform/backend.hcl
+          bucket = "${{ steps.parse.outputs.bucket }}"
+          key    = "state/terraform.tfstate"
+          region = "${{ steps.parse.outputs.region }}"
+          EOF
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
@@ -66,9 +52,6 @@ jobs:
       - name: Terraform Init
         working-directory: terraform
         run: terraform init -backend-config=backend.hcl
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
       - name: Terraform Apply
         working-directory: terraform
