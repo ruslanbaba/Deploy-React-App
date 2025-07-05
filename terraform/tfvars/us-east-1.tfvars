@@ -1,0 +1,6 @@
+region         = "us-east-1"
+instance_name  = "test-react-app"
+vpc_name       = "react-app-vpc"
+instance_type  = "t2.micro"
+ami_id         = "ami-0c02fb55956c7d316"
+bucket         = "us-east-1-state-reactapp"  
