@@ -20,17 +20,17 @@ jobs:
       - name: Parse region and bucket from tfvars
         id: parse
         run: |
-          REGION=$(grep '^region' $TF_VAR_file | awk -F= '{gsub(/ /, "", $2); gsub(/"/, "", $2); print $2}')
-          BUCKET=$(grep '^bucket_name' $TF_VAR_file | awk -F= '{gsub(/ /, "", $2); gsub(/"/, "", $2); print $2}')
+          REGION=$(awk -F= '/^region/ {gsub(/ /, "", $2); gsub(/"/, "", $2); print $2}' $TF_VAR_file)
+          BUCKET=$(awk -F= '/^bucket_name/ {gsub(/ /, "", $2); gsub(/"/, "", $2); print $2}' $TF_VAR_file)
           echo "region=$REGION" >> $GITHUB_OUTPUT
           echo "bucket=$BUCKET" >> $GITHUB_OUTPUT
 
-      - name: Debug parsed values
+      - name: Validate parsed values
         run: |
           echo "Parsed region: ${{ steps.parse.outputs.region }}"
           echo "Parsed bucket: ${{ steps.parse.outputs.bucket }}"
           if [ -z "${{ steps.parse.outputs.bucket }}" ]; then
-            echo "::error ::Bucket name is empty. Please check tfvars format."
+            echo "::error ::Bucket name is empty. Please check tfvars format and spacing."
             exit 1
           fi
 
