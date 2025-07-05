@@ -21,7 +21,7 @@ jobs:
         id: parse
         run: |
           REGION=$(grep '^region' $TF_VAR_file | cut -d'=' -f2 | tr -d '" ')
-          BUCKET=$(grep '^bucket' $TF_VAR_file | cut -d'=' -f2 | tr -d '" ')
+          BUCKET=$(grep '^bucket_name' $TF_VAR_file | cut -d'=' -f2 | tr -d '" ')
           echo "region=$REGION" >> $GITHUB_OUTPUT
           echo "bucket=$BUCKET" >> $GITHUB_OUTPUT
 
