@@ -22,12 +22,12 @@ jobs:
 
       - name: Build React App
         run: |
-          npm install --prefix src
-          npm run build --prefix src
+          npm install
+          npm run build
 
       - name: Upload React Build to S3
         run: |
-          aws s3 sync src/build/ s3://${{ secrets.REACT_DEPLOY_BUCKET }}/ --delete
+          aws s3 sync build/ s3://${{ secrets.REACT_DEPLOY_BUCKET }}/ --delete
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
