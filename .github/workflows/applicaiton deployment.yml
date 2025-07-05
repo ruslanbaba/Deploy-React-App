@@ -25,6 +25,13 @@ jobs:
           npm install
           npm run build
 
+      - name: Check REACT_DEPLOY_BUCKET secret
+        run: |
+          if [ -z "${{ secrets.REACT_DEPLOY_BUCKET }}" ]; then
+            echo "REACT_DEPLOY_BUCKET secret is not set!" >&2
+            exit 1
+          fi
+
       - name: Upload React Build to S3
         run: |
           aws s3 sync build/ s3://${{ secrets.REACT_DEPLOY_BUCKET }}/ --delete
