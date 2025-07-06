@@ -44,7 +44,7 @@ jobs:
         run: |
           INSTANCE_ID=$(aws ec2 describe-instances \
             --region us-east-1 \
-            --filters "Name=tag:Name,Values=react-app-server" \
+            --filters "Name=tag:Name,Values=test-react-app" \
             --query "Reservations[].Instances[].InstanceId" \
             --output text)
           echo "INSTANCE_ID=$INSTANCE_ID"
