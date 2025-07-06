@@ -1,51 +1,51 @@
-name: Terraform Plan on PR
+# name: Terraform Plan on PR
 
-on:
-  pull_request:
-    paths:
-      - 'terraform/**'
-      - '.github/workflows/**'
+# on:
+#   pull_request:
+#     paths:
+#       - 'terraform/**'
+#       - '.github/workflows/**'
 
-jobs:
-  terraform-plan:
-    name: Terraform Plan
-    runs-on: ubuntu-latest
+# jobs:
+#   terraform-plan:
+#     name: Terraform Plan
+#     runs-on: ubuntu-latest
 
-    env:
-      TF_VAR_file: terraform/tfvars/us-east-1.tfvars
+#     env:
+#       TF_VAR_file: terraform/tfvars/us-east-1.tfvars
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+#     steps:
+#       - name: Checkout repository
+#         uses: actions/checkout@v3
 
-      - name: Parse region and bucket from tfvars
-        id: parse
-        run: |
-          REGION=$(grep '^region' $TF_VAR_file | cut -d'=' -f2 | tr -d '" ')
-          BUCKET=$(grep '^bucket_name' $TF_VAR_file | cut -d'=' -f2 | tr -d '" ')
-          echo "region=$REGION" >> $GITHUB_OUTPUT
-          echo "bucket=$BUCKET" >> $GITHUB_OUTPUT
+#       - name: Parse region and bucket from tfvars
+#         id: parse
+#         run: |
+#           REGION=$(grep '^region' $TF_VAR_file | cut -d'=' -f2 | tr -d '" ')
+#           BUCKET=$(grep '^bucket_name' $TF_VAR_file | cut -d'=' -f2 | tr -d '" ')
+#           echo "region=$REGION" >> $GITHUB_OUTPUT
+#           echo "bucket=$BUCKET" >> $GITHUB_OUTPUT
 
-      - name: Generate backend config
-        run: |
-          cat <<EOF > terraform/backend.hcl
-          bucket = "${{ steps.parse.outputs.bucket }}"
-          key    = "state/terraform.tfstate"
-          region = "${{ steps.parse.outputs.region }}"
-          EOF
+#       - name: Generate backend config
+#         run: |
+#           cat <<EOF > terraform/backend.hcl
+#           bucket = "${{ steps.parse.outputs.bucket }}"
+#           key    = "state/terraform.tfstate"
+#           region = "${{ steps.parse.outputs.region }}"
+#           EOF
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: 1.7.5
+#       - name: Setup Terraform
+#         uses: hashicorp/setup-terraform@v3
+#         with:
+#           terraform_version: 1.7.5
 
-      - name: Terraform Init
-        working-directory: terraform
-        run: terraform init -backend-config=backend.hcl
+#       - name: Terraform Init
+#         working-directory: terraform
+#         run: terraform init -backend-config=backend.hcl
 
-      - name: Terraform Plan
-        working-directory: terraform
-        run: terraform plan -var-file=tfvars/us-east-1.tfvars
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+#       - name: Terraform Plan
+#         working-directory: terraform
+#         run: terraform plan -var-file=tfvars/us-east-1.tfvars
+#         env:
+#           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+#           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
