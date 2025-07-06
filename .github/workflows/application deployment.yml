@@ -1,4 +1,4 @@
-name: Deploy React App to EC2 (No S3)
+name: Deploy React App to EC2 via SSM
 
 on:
   push:
@@ -10,7 +10,7 @@ on:
 
 jobs:
   deploy:
-    name: Build and Deploy React to EC2 via SSM
+    name: Build and Deploy React App
     runs-on: ubuntu-latest
 
     steps:
@@ -20,12 +20,24 @@ jobs:
       - name: Check AWS CLI version
         run: aws --version
 
+      - name: Parse bucket_name from tfvars
+        id: tfvars
+        run: |
+          BUCKET=$(grep '^bucket_name' terraform/tfvars/us-east-1.tfvars | cut -d'=' -f2 | tr -d '" ')
+          echo "bucket_name=$BUCKET" >> $GITHUB_OUTPUT
+
       - name: Build React App
         run: |
           npm install
           npm run build
           zip -r build.zip build
-          base64 build.zip > build.b64
+
+      - name: Upload React build.zip to S3 (same bucket as Terraform backend)
+        run: |
+          aws s3 cp build.zip s3://${{ steps.tfvars.outputs.bucket_name }}/react-app/build.zip
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
       - name: Get EC2 Instance ID
         id: ec2
@@ -40,20 +52,18 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
-      - name: Send React Build to EC2 via SSM
+      - name: Deploy React Build from S3 via SSM
         run: |
-          BASE64_CONTENT=$(cat build.b64)
           aws ssm send-command \
             --document-name "AWS-RunShellScript" \
-            --comment "Deploy React build directly via SSM" \
+            --comment "Deploy React app from S3" \
             --instance-ids "${{ steps.ec2.outputs.instance_id }}" \
             --parameters 'commands=[
-              "echo \"'"$BASE64_CONTENT"'\" > /tmp/build.b64",
-              "base64 -d /tmp/build.b64 > /tmp/build.zip",
               "sudo yum install -y unzip httpd",
               "sudo systemctl enable httpd && sudo systemctl start httpd",
-              "sudo rm -rf /var/www/html/*",
-              "sudo unzip -o /tmp/build.zip -d /var/www/html/"
+              "sudo mkdir -p /var/www/html",
+              "aws s3 cp s3://${{ steps.tfvars.outputs.bucket_name }}/react-app/build.zip /tmp/build.zip",
+              "sudo unzip -o /tmp/build.zip -d /var/www/html"
             ]' \
             --region us-east-1 \
             --output text
