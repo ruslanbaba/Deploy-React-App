@@ -1,13 +1,16 @@
-name: Deploy React App
+name: Deploy React App to EC2 (No S3)
 
 on:
   push:
     branches:
       - main
+    paths:
+      - 'src/**'
+      - '.github/workflows/**'
 
 jobs:
   deploy:
-    name: Deploy React to EC2
+    name: Build and Deploy React to EC2 via SSM
     runs-on: ubuntu-latest
 
     steps:
@@ -24,13 +27,9 @@ jobs:
         run: |
           npm install --prefix src
           npm run build --prefix src
-
-      - name: Upload React Build to S3
-        run: |
-          aws s3 sync src/build/ s3://${{ secrets.REACT_DEPLOY_BUCKET }}/ --delete
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          cd src
+          zip -r build.zip build
+          base64 build.zip > ../build.b64
 
       - name: Get EC2 Instance ID
         id: ec2
@@ -44,18 +43,20 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
-      - name: Deploy to EC2 using SSM
+      - name: Send React Build to EC2 via SSM
         run: |
+          BASE64_CONTENT=$(cat build.b64)
           aws ssm send-command \
             --document-name "AWS-RunShellScript" \
-            --comment "Deploy React app to Apache" \
+            --comment "Deploy React build directly via SSM" \
             --instance-ids "${{ steps.ec2.outputs.instance_id }}" \
             --parameters 'commands=[
-              "sudo yum install -y httpd",
-              "sudo systemctl start httpd",
-              "sudo systemctl enable httpd",
-              "sudo mkdir -p /var/www/html",
-              "sudo aws s3 sync s3://${{ secrets.REACT_DEPLOY_BUCKET }}/ /var/www/html/"
+              "echo \"'"$BASE64_CONTENT"'\" > /tmp/build.b64",
+              "base64 -d /tmp/build.b64 > /tmp/build.zip",
+              "sudo yum install -y unzip httpd",
+              "sudo systemctl enable httpd && sudo systemctl start httpd",
+              "sudo rm -rf /var/www/html/*",
+              "sudo unzip -o /tmp/build.zip -d /var/www/html/"
             ]' \
             --region us-east-1 \
             --output text
