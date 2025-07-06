@@ -22,11 +22,10 @@ jobs:
 
       - name: Build React App
         run: |
-          npm install --prefix src
-          npm run build --prefix src
-          cd src
+          npm install
+          npm run build
           zip -r build.zip build
-          base64 build.zip > ../build.b64
+          base64 build.zip > build.b64
 
       - name: Get EC2 Instance ID
         id: ec2
