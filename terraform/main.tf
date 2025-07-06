@@ -42,7 +42,7 @@ module "ec2" {
   }
 }
 
-resource "aws_iam_role" "test_role----test" {
+resource "aws_iam_role" "test_role----    test" {
   name = "test_role"
 
 
