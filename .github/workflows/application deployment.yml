@@ -37,7 +37,8 @@ jobs:
 
       - name: Upload build.zip to S3
         run: |
-          aws s3 cp build.zip s3://${{ steps.tfvars.outputs.bucket_name }}/react-app/build.zip
+          aws s3 cp build.zip s3://${{ steps.tfvars.outputs.bucket_name }}/react-app/build.zip --region us-east-1
+          aws s3 ls s3://${{ steps.tfvars.outputs.bucket_name }}/react-app/build.zip --region us-east-1 || exit 1
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -65,11 +66,11 @@ jobs:
             --parameters 'commands=[
               "sudo yum install -y unzip httpd",
               "sudo systemctl enable httpd && sudo systemctl start httpd",
-              "aws s3 cp s3://${{ steps.tfvars.outputs.bucket_name }}/react-app/build.zip /tmp/build.zip",
+              "aws s3 cp s3://${{ steps.tfvars.outputs.bucket_name }}/react-app/build.zip /tmp/build.zip --region us-east-1",
               "sudo unzip -o /tmp/build.zip -d /tmp/",
               "sudo mkdir -p /var/www/html",
               "sudo rm -rf /var/www/html/*",
-              "sudo mv /tmp/build/* /var/www/html/",
+              "if [ -d /tmp/build ]; then sudo mv /tmp/build/* /var/www/html/; fi",
               "sudo rm -rf /tmp/build /tmp/build.zip",
               "echo \"RewriteEngine On\nRewriteBase /\nRewriteRule ^index\\.html$ - [L]\nRewriteCond %{REQUEST_FILENAME} !-f\nRewriteCond %{REQUEST_FILENAME} !-d\nRewriteRule . /index.html [L]\" | sudo tee /var/www/html/.htaccess",
               "sudo systemctl restart httpd"
