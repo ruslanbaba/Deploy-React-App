@@ -6,6 +6,9 @@ on:
       - main
     paths:
       - 'src/**'
+      - 'public/**'
+      - 'package.json'
+      - 'package-lock.json'
       - '.github/workflows/**'
 
 jobs:
@@ -14,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
+      - name: Checkout repository
         uses: actions/checkout@v3
 
       - name: Check AWS CLI version
@@ -32,14 +35,14 @@ jobs:
           npm run build
           zip -r build.zip build
 
-      - name: Upload React build.zip to S3 (same bucket as Terraform backend)
+      - name: Upload build.zip to S3
         run: |
           aws s3 cp build.zip s3://${{ steps.tfvars.outputs.bucket_name }}/react-app/build.zip
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          
-      - name: Get EC2 Instance ID
+
+      - name: Get EC2 Instance ID by tag
         id: ec2
         run: |
           INSTANCE_ID=$(aws ec2 describe-instances \
@@ -47,17 +50,13 @@ jobs:
             --filters "Name=tag:Name,Values=test-react-app" "Name=instance-state-name,Values=running" \
             --query "Reservations[].Instances[].InstanceId" \
             --output text)
-          echo "INSTANCE_ID=$INSTANCE_ID"
-          echo "instance_id=$INSTANCE_ID" >> $GITHUB_ENV
           echo "instance_id=$INSTANCE_ID" >> $GITHUB_OUTPUT
+          echo "INSTANCE_ID=$INSTANCE_ID"
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
-      - name: Debug instance_id
-        run: echo "Instance ID is ${{ steps.ec2.outputs.instance_id }}"
-
-      - name: Deploy React Build from S3 via SSM
+      - name: Deploy React App via SSM
         run: |
           aws ssm send-command \
             --document-name "AWS-RunShellScript" \
@@ -66,9 +65,14 @@ jobs:
             --parameters 'commands=[
               "sudo yum install -y unzip httpd",
               "sudo systemctl enable httpd && sudo systemctl start httpd",
-              "sudo mkdir -p /var/www/html",
               "aws s3 cp s3://${{ steps.tfvars.outputs.bucket_name }}/react-app/build.zip /tmp/build.zip",
-              "sudo unzip -o /tmp/build.zip -d /var/www/html"
+              "sudo unzip -o /tmp/build.zip -d /tmp/",
+              "sudo mkdir -p /var/www/html",
+              "sudo rm -rf /var/www/html/*",
+              "sudo mv /tmp/build/* /var/www/html/",
+              "sudo rm -rf /tmp/build /tmp/build.zip",
+              "echo \"RewriteEngine On\nRewriteBase /\nRewriteRule ^index\\.html$ - [L]\nRewriteCond %{REQUEST_FILENAME} !-f\nRewriteCond %{REQUEST_FILENAME} !-d\nRewriteRule . /index.html [L]\" | sudo tee /var/www/html/.htaccess",
+              "sudo systemctl restart httpd"
             ]' \
             --region us-east-1 \
             --output text
