@@ -20,15 +20,19 @@ resource "aws_iam_role_policy_attachment" "ssm_attach" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
 }
 
+resource "aws_iam_role_policy_attachment" "s3_read_access" {
+  role       = aws_iam_role.ssm_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"
+}
+
 resource "aws_iam_instance_profile" "ssm_profile" {
   name = "ec2-ssm-instance-profile"
   role = aws_iam_role.ssm_role.name
 }
 
 module "ec2" {
-  source  = "terraform-aws-modules/ec2-instance/aws"
-  version = "5.2.1"
-
+  source                      = "terraform-aws-modules/ec2-instance/aws"
+  version                     = "5.2.1"
   name                        = var.instance_name
   ami                         = var.ami_id
   instance_type               = var.instance_type
