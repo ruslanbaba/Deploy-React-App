@@ -12,10 +12,10 @@ desired_capacity = 3
 
 # Cost Management
 budget_limit = 500
-alert_emails = ["devops@company.com", "finance@company.com"]
+alert_emails = ["your@company.com", "yourfinancedept@company.com"]
 
 # Secrets (use AWS Secrets Manager in production)
-database_password = "CHANGE_ME_IN_PRODUCTION"
-api_key = "CHANGE_ME_IN_PRODUCTION"
-jwt_secret = "CHANGE_ME_IN_PRODUCTION"
+database_password = "your_db_password"
+api_key = "your_api_key"
+jwt_secret = "replace_with_your_key"
 slack_webhook_url = "https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK"

@@ -97,6 +97,7 @@ To extend CI/CD:
 - **DAST (Dynamic Application Security Testing)**
   - OWASP ZAP baseline scan for runtime vulnerabilities
   - Automated security testing in CI/CD pipeline
+>>>>>>> e24b741723ebae119da3060df10d2c9eb1446451
 - **Infrastructure Security**
   - Checkov for Terraform security compliance
   - TFSec for Terraform static analysis
