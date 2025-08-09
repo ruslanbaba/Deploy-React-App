@@ -1,7 +1,13 @@
 # Deploy React App
 
 A scalable, secure React app with modular Terraform infrastructure, multi-environment support (dev/qa/prod), and CI linting.
+
+
+<<<<<<< HEAD
+###  Completed Infrastructure
+=======
 ### Completed Infrastructure
+>>>>>>> e24b741723ebae119da3060df10d2c9eb1446451
 - **Modular Terraform**: Full migration from legacy EC2 to modular architecture
 - **Multi-Environment**: Complete dev/qa/prod support with workspace isolation
 - **Auto-Scaling**: ASG + ALB with health checks and target groups
@@ -96,6 +102,7 @@ To extend CI/CD:
 - **DAST (Dynamic Application Security Testing)**
   - OWASP ZAP baseline scan for runtime vulnerabilities
   - Automated security testing in CI/CD pipeline
+>>>>>>> e24b741723ebae119da3060df10d2c9eb1446451
 - **Infrastructure Security**
   - Checkov for Terraform security compliance
   - TFSec for Terraform static analysis
