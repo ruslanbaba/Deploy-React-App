@@ -205,10 +205,3 @@ npm test
 npm start
 ```
 
-## Roadmap / next steps
-
-- Wire root Terraform fully to the new modules (phased migration from legacy `ec2` usage)
-- Add GitHub Actions plan/apply workflows with OIDC and environment protections
-- Add SNS topics/Slack notifications for alarms; expand metrics and dashboards
-- Add cost budgets and anomaly detection
-- Add WAF association to ALB/CloudFront explicitly as needed
