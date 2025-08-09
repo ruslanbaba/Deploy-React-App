@@ -3,11 +3,9 @@
 A scalable, secure React app with modular Terraform infrastructure, multi-environment support (dev/qa/prod), and CI linting.
 
 
-<<<<<<< HEAD
 ###  Completed Infrastructure
 =======
 ### Completed Infrastructure
->>>>>>> e24b741723ebae119da3060df10d2c9eb1446451
 - **Modular Terraform**: Full migration from legacy EC2 to modular architecture
 - **Multi-Environment**: Complete dev/qa/prod support with workspace isolation
 - **Auto-Scaling**: ASG + ALB with health checks and target groups
