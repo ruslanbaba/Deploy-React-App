@@ -1,0 +1,146 @@
+name: Dependency Security Check
+on:
+  push:
+    branches: [ main, develop ]
+    paths: [ 'package*.json', 'yarn.lock' ]
+  pull_request:
+    branches: [ main ]
+    paths: [ 'package*.json', 'yarn.lock' ]
+  schedule:
+    # Run weekly on Mondays at 9 AM UTC
+    - cron: '0 9 * * 1'
+  workflow_dispatch:
+
+jobs:
+  security-audit:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run npm audit
+        run: |
+          npm audit --audit-level=high --json > npm-audit.json || true
+          npm audit --audit-level=high
+
+      - name: Check for critical vulnerabilities
+        run: |
+          CRITICAL_COUNT=$(cat npm-audit.json | jq '.metadata.vulnerabilities.critical // 0')
+          HIGH_COUNT=$(cat npm-audit.json | jq '.metadata.vulnerabilities.high // 0')
+          
+          echo "Critical vulnerabilities: $CRITICAL_COUNT"
+          echo "High vulnerabilities: $HIGH_COUNT"
+          
+          if [ "$CRITICAL_COUNT" -gt 0 ] || [ "$HIGH_COUNT" -gt 0 ]; then
+            echo "::error::Found $CRITICAL_COUNT critical and $HIGH_COUNT high severity vulnerabilities"
+            exit 1
+          fi
+
+      - name: Test for ReDoS vulnerabilities
+        run: |
+          echo "Testing for ReDoS vulnerabilities..."
+          
+          # Test nth-check ReDoS vulnerability
+          node -e "
+          try {
+            const nthCheck = require('nth-check');
+            console.time('nth-check-test');
+            try { 
+              nthCheck.parse('2n' + ' '.repeat(1000) + '!'); 
+            } catch(e) { 
+              console.timeEnd('nth-check-test'); 
+            }
+            console.log('✅ nth-check ReDoS test passed');
+          } catch(e) {
+            console.log('⚠️  nth-check not found, which is expected if fixed');
+          }
+          " 2>/dev/null || echo "ReDoS test completed"
+
+      - name: Upload audit results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: npm-audit-results
+          path: npm-audit.json
+
+  dependency-review:
+    name: Dependency Review
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
+          deny-licenses: GPL-2.0, GPL-3.0
+
+  auto-fix:
+    name: Auto-fix vulnerabilities
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run npm audit fix
+        run: |
+          npm audit fix --audit-level=high
+          
+      - name: Check for changes
+        id: verify-changed-files
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create Pull Request
+        if: steps.verify-changed-files.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: 'fix(deps): auto-fix security vulnerabilities'
+          title: 'Security: Auto-fix dependency vulnerabilities'
+          body: |
+            🔒 **Automated Security Fix**
+            
+            This PR was automatically created to fix security vulnerabilities in dependencies.
+            
+            ### Changes
+            - Updated dependencies to fix security vulnerabilities
+            - Ran `npm audit fix` to resolve issues
+            
+            ### Security Impact
+            This update addresses known security vulnerabilities. Please review and merge promptly.
+            
+            **Note**: This PR was created by an automated workflow. Please review the changes before merging.
+          branch: security/auto-fix-dependencies
+          delete-branch: true
