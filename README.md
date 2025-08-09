@@ -2,12 +2,8 @@
 
 A scalable, secure React app with modular Terraform infrastructure, multi-environment support (dev/qa/prod), and CI linting.
 
-## Architecture at a glance
 
-- Terraform modules
-  - `network## 📖 Architecture & Implementation Status
-
-### ✅ Completed Infrastructure
+### Completed Infrastructure
 - **Modular Terraform**: Full migration from legacy EC2 to modular architecture
 - **Multi-Environment**: Complete dev/qa/prod support with workspace isolation
 - **Auto-Scaling**: ASG + ALB with health checks and target groups
@@ -91,7 +87,7 @@ To extend CI/CD:
 - Add environment-scoped plan/apply jobs gated by PR labels or branches
 - Use GitHub OIDC to assume AWS roles per environment (no long-lived secrets)
 
-## 🔒 Security & Best Practices
+##  Security & Best Practices
 
 ### DevSecOps Pipeline
 - **SAST (Static Application Security Testing)**
