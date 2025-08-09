@@ -1,0 +1,7 @@
+# ZAP rules for React app scanning
+# Format: rule_id	WARN|INFO|IGNORE	description
+10021	WARN	X-Content-Type-Options header missing
+10020	WARN	X-Frame-Options header missing
+10016	WARN	Web Browser XSS Protection not enabled
+10035	INFO	Strict-Transport-Security header missing
+90022	IGNORE	Application Error disclosure (development mode expected)
