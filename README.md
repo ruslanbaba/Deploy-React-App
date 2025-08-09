@@ -1,4 +1,4 @@
-# Senior DevOps Engineer Take-Home Challenge
+# Deploy React App
 
 This repository contains a basic React app for use in a CI/CD and deployment challenge.
 
