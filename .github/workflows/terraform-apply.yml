@@ -1,0 +1,155 @@
+name: Terraform Apply
+on:
+  push:
+    branches: [ main ]
+    paths: [ 'terraform/**' ]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+        - dev
+        - qa
+        - prod
+
+env:
+  TF_VERSION: '1.5.0'
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy-dev:
+    if: github.ref == 'refs/heads/main' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'dev')
+    runs-on: ubuntu-latest
+    environment: dev
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN_DEV }}
+          role-session-name: terraform-apply-dev
+          aws-region: us-east-1
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform Init
+        working-directory: terraform
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ secrets.TF_STATE_BUCKET_DEV }}" \
+            -backend-config="key=dev/terraform.tfstate" \
+            -backend-config="region=us-east-1" \
+            -backend-config="dynamodb_table=${{ secrets.TF_STATE_LOCK_TABLE_DEV }}"
+
+      - name: Terraform Workspace
+        working-directory: terraform
+        run: |
+          terraform workspace select dev || terraform workspace new dev
+
+      - name: Terraform Apply
+        working-directory: terraform
+        run: |
+          terraform apply \
+            -var-file=tfvars/dev.tfvars \
+            -var="environment=dev" \
+            -auto-approve
+
+  deploy-qa:
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'qa'
+    runs-on: ubuntu-latest
+    environment: qa
+    needs: [deploy-dev]
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN_QA }}
+          role-session-name: terraform-apply-qa
+          aws-region: us-east-1
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform Init
+        working-directory: terraform
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ secrets.TF_STATE_BUCKET_QA }}" \
+            -backend-config="key=qa/terraform.tfstate" \
+            -backend-config="region=us-east-1" \
+            -backend-config="dynamodb_table=${{ secrets.TF_STATE_LOCK_TABLE_QA }}"
+
+      - name: Terraform Workspace
+        working-directory: terraform
+        run: |
+          terraform workspace select qa || terraform workspace new qa
+
+      - name: Terraform Apply
+        working-directory: terraform
+        run: |
+          terraform apply \
+            -var-file=tfvars/qa.tfvars \
+            -var="environment=qa" \
+            -auto-approve
+
+  deploy-prod:
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'prod'
+    runs-on: ubuntu-latest
+    environment: prod
+    needs: [deploy-qa]
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN_PROD }}
+          role-session-name: terraform-apply-prod
+          aws-region: us-east-1
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform Init
+        working-directory: terraform
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ secrets.TF_STATE_BUCKET_PROD }}" \
+            -backend-config="key=prod/terraform.tfstate" \
+            -backend-config="region=us-east-1" \
+            -backend-config="dynamodb_table=${{ secrets.TF_STATE_LOCK_TABLE_PROD }}"
+
+      - name: Terraform Workspace
+        working-directory: terraform
+        run: |
+          terraform workspace select prod || terraform workspace new prod
+
+      - name: Terraform Apply
+        working-directory: terraform
+        run: |
+          terraform apply \
+            -var-file=tfvars/prod.tfvars \
+            -var="environment=prod" \
+            -auto-approve

@@ -5,7 +5,27 @@ A scalable, secure React app with modular Terraform infrastructure, multi-enviro
 ## Architecture at a glance
 
 - Terraform modules
-  - `network`: VPC, subnets, DNS settings
+  - `network## 📖 Architecture & Implementation Status
+
+### ✅ Completed Infrastructure
+- **Modular Terraform**: Full migration from legacy EC2 to modular architecture
+- **Multi-Environment**: Complete dev/qa/prod support with workspace isolation
+- **Auto-Scaling**: ASG + ALB with health checks and target groups
+- **CDN**: CloudFront with WAF association and caching optimization
+- **Security**: Enhanced WAF, GuardDuty, VPC Flow Logs, KMS encryption
+- **Monitoring**: Comprehensive CloudWatch dashboards, alerts, and Slack notifications
+- **Cost Management**: Budgets, anomaly detection, and cost allocation tagging
+- **CI/CD**: OIDC-authenticated GitHub Actions for plan/apply workflows
+
+### Infrastructure Modules
+- `network/` – VPC with private subnets, flow logs, encryption
+- `compute/` – Auto Scaling Groups with Launch Templates and ALB
+- `security/` – Enhanced WAF, GuardDuty, security groups with least privilege
+- `cdn/` – CloudFront with WAF association and S3 origin support
+- `monitoring/` – Multi-metric dashboards, alarms, and encrypted logs
+- `secrets/` – Secrets Manager and SSM Parameter Store with KMS
+- `notifications/` – SNS with Lambda-based Slack integration
+- `cost/` – Budget alerts, anomaly detection, and cost dashboards subnets, DNS settings
   - `compute`: Auto Scaling Group (ASG) + Application Load Balancer (ALB)
   - `security`: Security Groups + AWS WAF (managed rules)
   - `cdn`: CloudFront distribution for global caching
