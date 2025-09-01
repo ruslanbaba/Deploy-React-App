@@ -12,22 +12,6 @@ A scalable, secure React app with modular Terraform infrastructure, multi-enviro
 - **Cost Management**: Budgets, anomaly detection, and cost allocation tagging
 - **CI/CD**: OIDC-authenticated GitHub Actions for plan/apply workflows
 
-### Infrastructure Modules
-- `network/` – VPC with private subnets, flow logs, encryption
-- `compute/` – Auto Scaling Groups with Launch Templates and ALB
-- `security/` – Enhanced WAF, GuardDuty, security groups with least privilege
-- `cdn/` – CloudFront with WAF association and S3 origin support
-- `monitoring/` – Multi-metric dashboards, alarms, and encrypted logs
-- `secrets/` – Secrets Manager and SSM Parameter Store with KMS
-- `notifications/` – SNS with Lambda-based Slack integration
-- `cost/` – Budget alerts, anomaly detection, and cost dashboards subnets, DNS settings
-  - `compute`: Auto Scaling Group (ASG) + Application Load Balancer (ALB)
-  - `security`: Security Groups + AWS WAF (managed rules)
-  - `cdn`: CloudFront distribution for global caching
-  - `monitoring`: CloudWatch Log Group and CPU alarm
-- Multi-environment configuration via `terraform/tfvars/{dev,qa,prod}.tfvars`
-- CI linting with TFLint + `terraform fmt` (GitHub Actions)
-- Remote backend (S3 backend block present; configure bucket/DynamoDB outside this repo)
 
 ## Repository structure
 
@@ -60,21 +44,6 @@ Environment-specific values live in:
 - `terraform/tfvars/qa.tfvars`
 - `terraform/tfvars/prod.tfvars`
 
-Suggested workspace flow (commands shown for reference; do not run here):
-
-```bash
-# one-time per machine
-terraform init
-
-# create/select workspace
-terraform workspace new dev || terraform workspace select dev
-
-# plan/apply with env vars
-terraform plan -var-file=tfvars/dev.tfvars
-terraform apply -var-file=tfvars/dev.tfvars
-```
-
-For `qa`/`prod`, replace the tfvars/workspace accordingly. Use least-privilege AWS credentials and a remote backend (S3 + DynamoDB lock) for team safety.
 
 ## CI: Terraform linting
 
@@ -82,21 +51,6 @@ For `qa`/`prod`, replace the tfvars/workspace accordingly. Use least-privilege A
 - Steps: `tflint` + `terraform fmt -check`
 - Workflow: `.github/workflows/terraform-lint.yml`
 
-To extend CI/CD:
-- Add environment-scoped plan/apply jobs gated by PR labels or branches
-- Use GitHub OIDC to assume AWS roles per environment (no long-lived secrets)
-
-##  Security & Best Practices
-
-### DevSecOps Pipeline
-- **SAST (Static Application Security Testing)**
-  - ESLint Security Plugin for JavaScript vulnerabilities
-  - Semgrep for custom security rules and OWASP Top 10
-  - npm audit for dependency vulnerabilities
-  - Snyk for comprehensive dependency scanning
-- **DAST (Dynamic Application Security Testing)**
-  - OWASP ZAP baseline scan for runtime vulnerabilities
-  - Automated security testing in CI/CD pipeline
     
 - **Infrastructure Security**
   - Checkov for Terraform security compliance
@@ -157,70 +111,6 @@ Security workflows run on:
 - CPU alarm example included (add SNS notification targets per your ops tooling)
 - Tag all resources for cost tracking (project, env, owner)
 
-## Using the modules (example root wiring)
 
-You can migrate the root to use the new modules. Example snippet (for reference):
 
-```hcl
-module "network" {
-  source           = "./modules/network"
-  vpc_name         = var.vpc_name
-  vpc_cidr         = "10.0.0.0/16"
-  azs              = ["us-east-1a", "us-east-1b"]
-  public_subnets   = ["10.0.1.0/24", "10.0.2.0/24"]
-  private_subnets  = ["10.0.11.0/24", "10.0.12.0/24"]
-}
-
-module "security" {
-  source  = "./modules/security"
-  sg_name = "react-app-sg"
-  vpc_id  = module.network.vpc_id
-  sg_rules = [
-    {
-      from_port   = 80
-      to_port     = 80
-      protocol    = "tcp"
-      cidr_blocks = "0.0.0.0/0"
-    }
-  ]
-  waf_name = "react-app-waf"
-}
-
-module "compute" {
-  source              = "./modules/compute"
-  instance_name       = var.instance_name
-  subnet_ids          = module.network.public_subnets
-  min_size            = 2
-  max_size            = 10
-  desired_capacity    = 2
-  alb_name            = "react-app-alb"
-  alb_security_groups = [module.security.security_group_id]
-}
-
-module "cdn" {
-  source             = "./modules/cdn"
-  origin_domain_name = module.compute.alb_dns_name
-}
-
-module "monitoring" {
-  source         = "./modules/monitoring"
-  log_group_name = "react-app-logs"
-  cpu_alarm_name = "react-app-cpu-alarm"
-}
-```
-
-Adjust variables to match your `tfvars` files per environment.
-
-## Frontend deployment options
-
-- Static hosting: Build React (`npm run build`) and deploy `build/` to S3 + CloudFront (preferred for static SPAs)
-- Server-origin: Serve via ALB/EC2 if you need SSR or custom backend; put CloudFront in front as cache/shield
-
-## Getting started (local app)
-
-```bash
-npm install
-npm test
-npm start
-```
 
